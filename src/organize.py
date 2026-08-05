@@ -1,6 +1,7 @@
 from pathlib import Path
 from classify import classify
 from datetime import datetime
+import sys
 
 import shutil     # add at the TOP of the file with your other imports
 
@@ -105,8 +106,10 @@ def build_plan(clusters, projects, output_root):
 
 
 
-files = scan("/Users/rayyangbackup/Downloads")
+input_folder = sys.argv[1]         
+desktop = Path.home() / "Desktop" 
+files = scan(input_folder)
 clusters = cluster_by_date(files)
-projects = assign_projects(clusters, "/Users/rayyangbackup/Desktop")
-plan = build_plan(clusters, projects, "/Users/rayyangbackup/Desktop/Organized")
+projects = assign_projects(clusters, desktop)
+plan = build_plan(clusters, projects, desktop / "Organized")
 run_copy(plan)
