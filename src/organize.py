@@ -61,47 +61,52 @@ def cluster_by_date(files):
         clusters[date].append(file)        
     return clusters
 
-def assign_projects(clusters, projects_source):
-    projects = {}
-    known = []
+def parse_command(text):
+    project_part, numbers_part = text.split(":")        # "portfolio: 1,3,5" -> ["portfolio", " 1,3,5"]
+    project = project_part.strip()                      # clean spaces -> "portfolio"
+    numbers = [int(n) for n in numbers_part.split(",")] # " 1,3,5" -> [1, 3, 5]
+    return project, numbers
 
+    
+def assign_files_to_projects(files, projects_source):
+    assignments = {}                      # file -> project name (the result)
+    known = []                            # existing project names, for reuse
+
+    # seed known projects from existing folders (same seeding as before)
     root = Path(projects_source)
     if root.is_dir():
         for p in root.iterdir():
-            if p.is_dir() and not p.name.startswith("."):                
+            if p.is_dir() and not p.name.startswith("."):
                 known.append(p.name)
 
-    for date, files in clusters.items():
-        print(f"\nOn {date} you had {len(files)} file(s): ")                              
-        for file in files:
-            print("  * " + file.name)
+    # keep looping until EVERY file has been assigned a project
+    while len(assignments) < len(files):
+        print("\nFiles still needing a project:")
+        for i, file in enumerate(files, start=1):
+            if file not in assignments:                 # only show unassigned ones
+                print(f"  {i}. {file.name}   ({file_date(file)})")
 
-        if known:                                    
-            print("Here's the list of project names: ")                           
-            for i, name in enumerate(known, start=1):
-                print(f"  {i}. {name}")
-            answer = input("Type in the number, or a new project name: ")                  
-        else:                                        
-            answer = input("Type a new project name:")                 
+        if known:
+            print("Known projects:", ", ".join(known))
 
-        if answer.isdigit():
-            name = known[int(answer) - 1]
-        else:
-            name = answer
-            if name not in known:
-                known.append(name)
+        command = input("Assign  (e.g.  portfolio: 1,3,5 ) : ")
+        project, numbers = parse_command(command)       # your parser from before
 
-        projects[date] = name
-    return projects
+        if project not in known:
+            known.append(project)
 
-def build_plan(clusters, projects, output_root):
-    plan = []                                          # list of (source, destination) pairs
-    for date, files in clusters.items():
-        project = projects[date]                       # the project name for this date
-        for file in files:
-            sub = classify(file)                       # e.g. "references/videos"
-            dest = Path(output_root) / project / date / sub / file.name   # stitch the 4 layers in order
-            plan.append((file, dest))
+        for n in numbers:
+            file = files[n - 1]                          # 1-based menu -> 0-based list
+            assignments[file] = project
+
+    return assignments
+def build_plan(assignments, output_root):
+    plan = []
+    for file, project in assignments.items():   # each file already knows its project
+        date = file_date(file)                  # ← date derived per file, automatically
+        sub = classify(file)
+        dest = Path(output_root) / project / date / sub / file.name
+        plan.append((file, dest))
     return plan
 
 
@@ -109,7 +114,6 @@ def build_plan(clusters, projects, output_root):
 input_folder = sys.argv[1]         
 desktop = Path.home() / "Desktop" 
 files = scan(input_folder)
-clusters = cluster_by_date(files)
-projects = assign_projects(clusters, desktop)
-plan = build_plan(clusters, projects, desktop / "Organized")
+assignments = assign_files_to_projects(files, desktop)
+plan = build_plan(assignments, desktop / "Organized")
 run_copy(plan)
