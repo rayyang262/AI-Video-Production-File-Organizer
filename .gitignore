@@ -1,0 +1,10 @@
+# Python virtual environment — derived from requirements.txt, machine-specific.
+# Recreate on any machine with: python3 -m venv .venv && ./.venv/bin/python -m pip install -r requirements.txt
+.venv/
+
+# Python bytecode cache (auto-generated)
+__pycache__/
+*.pyc
+
+# macOS folder metadata
+.DS_Store
