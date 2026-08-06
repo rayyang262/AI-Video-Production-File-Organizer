@@ -3,6 +3,7 @@ from classify import classify
 from datetime import datetime
 import sys
 
+
 import shutil     # add at the TOP of the file with your other imports
 
 def run_copy(plan):
@@ -67,7 +68,7 @@ def parse_command(text):
     numbers = [int(n) for n in numbers_part.split(",")] # " 1,3,5" -> [1, 3, 5]
     return project, numbers
 
-    
+
 def assign_files_to_projects(files, projects_source):
     assignments = {}                      # file -> project name (the result)
     known = []                            # existing project names, for reuse
