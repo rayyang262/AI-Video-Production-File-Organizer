@@ -4,6 +4,7 @@ from datetime import datetime
 import sys
 
 
+
 import shutil     # add at the TOP of the file with your other imports
 
 def run_copy(plan):
@@ -101,20 +102,34 @@ def assign_files_to_projects(files, projects_source):
             assignments[file] = project
 
     return assignments
-def build_plan(assignments, output_root):
+
+
+def build_plan(assignments, output_root, scene_map):
     plan = []
-    for file, project in assignments.items():   # each file already knows its project
-        date = file_date(file)                  # ← date derived per file, automatically
+    for file, project in assignments.items():
+        date = file_date(file)
         sub = classify(file)
-        dest = Path(output_root) / project / date / sub / file.name
+        dest = Path(output_root) / project / date / sub
+        if file in scene_map:                 # did this file get a scene name?
+            dest = dest / scene_map[file]     # insert the {scene} folder
+        dest = dest / file.name               # filename goes last
         plan.append((file, dest))
     return plan
 
 
+input_folder = sys.argv[1]
+desktop = Path.home() / "Desktop"
 
-input_folder = sys.argv[1]         
-desktop = Path.home() / "Desktop" 
 files = scan(input_folder)
 assignments = assign_files_to_projects(files, desktop)
-plan = build_plan(assignments, desktop / "Organized")
+
+scene_map = {}
+if input("Run AI scene grouping on generated videos? (y/n) ") == "y":
+    from analyze import group_scenes, name_groups
+    generated = [f for f in files if classify(f).startswith("videos/")]
+    if generated:
+        groups = group_scenes(generated)
+        scene_map = name_groups(groups)
+
+plan = build_plan(assignments, desktop / "Organized", scene_map)
 run_copy(plan)

@@ -4,7 +4,8 @@ from sentence_transformers import SentenceTransformer
 from PIL import Image
 from sentence_transformers import util
 from sentence_transformers import util
-
+from classify import classify_type     
+from pathlib import Path
 
 model = SentenceTransformer("clip-ViT-B-32")
 
@@ -26,8 +27,18 @@ def similarity(image_a, image_b):
     vb = embed(image_b)                    # vector for image B
     return util.cos_sim(va, vb).item()     # how close they are, as a plain number
 
+def to_image(path):
+    if classify_type(path) == "video":
+        cap = cv2.VideoCapture(path)
+        success, frame = cap.read()
+        cap.release()
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        return Image.fromarray(frame_rgb)
+    else:
+        return Image.open(path)
+
 def group_scenes(image_paths, threshold=0.8):
-    images = [Image.open(p) for p in image_paths]     # open every image
+    images = [to_image(p) for p in image_paths]     # open every image
     embeddings = model.encode(images)                 # embed them all -> matrix
     clusters = util.community_detection(
         embeddings, threshold=threshold, min_community_size=1
@@ -37,10 +48,26 @@ def group_scenes(image_paths, threshold=0.8):
         groups.append([image_paths[i] for i in cluster])   # indices -> paths
     return groups
 
-trees1 = "/Users/rayyangbackup/Downloads/Trees_flowers_grass_sunlight_202607171539.jpeg"
-trees2 = "/Users/rayyangbackup/Downloads/Trees_flowers_grass_dawn_scene_202607171539.jpeg"
-ui     = "/Users/rayyangbackup/Downloads/Add_button_to_navigation_bar_202607171542.jpeg"
+def name_groups(groups):
+    scene_of = {}                                  # file -> scene name
+    for group in groups:
+        print("\nProposed group:")
+        for f in group:
+            print("  *", Path(f).name)
+        name = input("Scene name (blank = leave untagged): ").strip()
+        if name:                                    # only tag if they typed something
+            for f in group:
+                scene_of[f] = name
+    return scene_of
 
-imgs = [trees1, trees2, ui]
+imgs = [
+  "/Users/rayyangbackup/Downloads/拉布布/Replace_coke_bottle_with_screenshot_202607311710.mp4",
+  "/Users/rayyangbackup/Downloads/拉布布/Camera_slow_motion_around_product_202607311558.mp4",
+  "/Users/rayyangbackup/Downloads/拉布布/Camera_slow_motion_around_product_202607311700.mp4",
+]
+
+
 for i, group in enumerate(group_scenes(imgs, threshold=0.8), start=1):
-    print(f"Group {i}:", [p.split('/')[-1] for p in group])
+    groups = group_scenes(imgs, threshold=0.8)   # AI proposes groups
+    scene_map = name_groups(groups)              # YOU name them (this is the input step)
+    print(scene_map)                             # the file -> scene result
