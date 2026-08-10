@@ -2,11 +2,12 @@ from pathlib import Path
 import cv2
 import re
 
+
 def classify_type(path):
     suffix = Path(path).suffix        
     suffix = suffix.lower()           
 
-    video_exts = {".mp4", ".mov"}             
+    video_exts = {".mp4", ".mov", ".m4v"}          
     image_exts = {".jpg", ".jpeg", ".png"}
 
     if suffix in video_exts:      
@@ -51,11 +52,16 @@ def is_generated_video(path):
     name = Path(path).name.lower()
     if name.startswith("kling"):
             return True
+
+    # Jimeng: filename contains a known marker anywhere
+    if name.startswith("jimeng-"):
+        return True
     
     # Topaz: filename contains a known marker anywhere
     if "_precision_starlight" in name:
         return True
 
+    # Tapnow: filename contains a known marker anywhere
     if re.search(r"video-", name):
         return True
 
@@ -92,3 +98,4 @@ if __name__ == "__main__":
     print(classify("/Users/rayyangbackup/Desktop/Session_1.mp4"))                               # expect references/videos      (.mp4, no generator name → reference)
     print(classify("/Users/rayyangbackup/Desktop/Screen Recording 2026-07-31 at 6.26.20 PM.mov"))  # expect references/videos  (.mov → guard → reference)
     print(classify("/Users/rayyangbackup/Desktop/Screenshot 2026-07-21 at 5.00.31 PM.png"))     # expect references/screenshots
+

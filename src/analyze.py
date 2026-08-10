@@ -4,10 +4,44 @@ from sentence_transformers import SentenceTransformer
 from PIL import Image
 from sentence_transformers import util
 from sentence_transformers import util
-from classify import classify_type     
+from classify import classify_type
 from pathlib import Path
+import numpy as np
 
 model = SentenceTransformer("clip-ViT-B-32")
+
+def embed_file(path):
+    """Embed any media file — extract a frame if video, open if image."""
+    return model.encode(to_image(path))          # to_image already handles video vs image
+
+
+def project_fingerprints(projects_root):
+    """One average embedding ('fingerprint') per existing project folder that has media."""
+    fingerprints = {}                            # project name -> average vector
+    root = Path(projects_root)
+    if not root.is_dir():
+        return fingerprints
+    for proj in root.iterdir():
+        if not proj.is_dir() or proj.name.startswith("."):
+            continue
+        media = [f for f in proj.rglob("*")      # rglob = search ALL sub-folders
+                 if f.suffix.lower() in (".mp4", ".mov", ".png", ".jpg", ".jpeg")]
+        if not media:
+            continue
+        vectors = [embed_file(f) for f in media]
+        fingerprints[proj.name] = np.mean(vectors, axis=0)   # average into one vector
+    return fingerprints
+
+
+def suggest_project(file, fingerprints, threshold=0.8):
+    """Return the most-similar project name, or None if nothing is close enough."""
+    v = embed_file(file)
+    best_name, best_score = None, 0.0
+    for name, fp in fingerprints.items():
+        score = util.cos_sim(v, fp).item()
+        if score > best_score:                   # keep the highest-scoring project
+            best_name, best_score = name, score
+    return best_name if best_score >= threshold else None
 
 def embed(image_path):
     image = Image.open(image_path)      # open the image file into memory (PIL)
@@ -60,14 +94,12 @@ def name_groups(groups):
                 scene_of[f] = name
     return scene_of
 
-imgs = [
-  "/Users/rayyangbackup/Downloads/拉布布/Replace_coke_bottle_with_screenshot_202607311710.mp4",
-  "/Users/rayyangbackup/Downloads/拉布布/Camera_slow_motion_around_product_202607311558.mp4",
-  "/Users/rayyangbackup/Downloads/拉布布/Camera_slow_motion_around_product_202607311700.mp4",
-]
-
-
-for i, group in enumerate(group_scenes(imgs, threshold=0.8), start=1):
+if __name__ == "__main__":
+    imgs = [
+      "/Users/rayyangbackup/Downloads/拉布布/Replace_coke_bottle_with_screenshot_202607311710.mp4",
+      "/Users/rayyangbackup/Downloads/拉布布/Camera_slow_motion_around_product_202607311558.mp4",
+      "/Users/rayyangbackup/Downloads/拉布布/Camera_slow_motion_around_product_202607311700.mp4",
+    ]
     groups = group_scenes(imgs, threshold=0.8)   # AI proposes groups
-    scene_map = name_groups(groups)              # YOU name them (this is the input step)
-    print(scene_map)                             # the file -> scene result
+    scene_map = name_groups(groups)              # YOU name them
+    print(scene_map)
