@@ -117,19 +117,20 @@ def build_plan(assignments, output_root, scene_map):
     return plan
 
 
-input_folder = sys.argv[1]
-desktop = Path.home() / "Desktop"
+if __name__ == "__main__":
+    input_folder = sys.argv[1]
+    desktop = Path.home() / "Desktop"
 
-files = scan(input_folder)
-assignments = assign_files_to_projects(files, desktop)
+    files = scan(input_folder)
+    assignments = assign_files_to_projects(files, desktop)
 
-scene_map = {}
-if input("Run AI scene grouping on generated videos? (y/n) ") == "y":
-    from analyze import group_scenes, name_groups
-    generated = [f for f in files if classify(f).startswith("videos/")]
-    if generated:
-        groups = group_scenes(generated)
-        scene_map = name_groups(groups)
+    scene_map = {}
+    if input("Run AI scene grouping on generated videos? (y/n) ") == "y":
+        from analyze import group_scenes, name_groups
+        generated = [f for f in files if classify(f).startswith("videos/")]
+        if generated:
+            groups = group_scenes(generated)
+            scene_map = name_groups(groups)
 
-plan = build_plan(assignments, desktop / "Organized", scene_map)
-run_copy(plan)
+    plan = build_plan(assignments, desktop / "Organized", scene_map)
+    run_copy(plan)
