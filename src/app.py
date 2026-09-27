@@ -33,8 +33,21 @@ if folder:
     assignments = {}
     if groups:
         st.write(f"### AI found {len(groups)} group(s)")
+        options = existing + [NEW]
+        counter = 0
         for g_idx, group in enumerate(groups):
             st.write(f"**Group {g_idx + 1}** — {len(group)} files")
+
+            # group-level name = the bulk default for the whole group
+            suggestion = suggestions[g_idx] if g_idx < len(suggestions) else None
+            default_idx = options.index(suggestion) if suggestion in existing else len(options) - 1
+            gchoice = st.selectbox(f"Project for group {g_idx + 1}:", options,
+                                   index=default_idx, key=f"gsel_{g_idx}")
+            group_name = gchoice
+            if gchoice == NEW:
+                group_name = st.text_input(f"New project for group {g_idx + 1}:", key=f"gnew_{g_idx}")
+
+            # per-file thumbnail + override
             gcols = st.columns(4)
             for j, f in enumerate(group):
                 c = gcols[j % 4]
@@ -43,18 +56,17 @@ if folder:
                 else:
                     c.image(str(f))
 
-            options = existing + [NEW]
-            suggestion = suggestions[g_idx] if g_idx < len(suggestions) else None
-            default_idx = options.index(suggestion) if suggestion in existing else len(options) - 1
-            choice = st.selectbox(f"Project for group {g_idx + 1}:", options,
-                                  index=default_idx, key=f"gsel_{g_idx}")     # dropdown, AI-defaulted
-            name = choice
-            if choice == NEW:
-                name = st.text_input(f"New project name for group {g_idx + 1}:", key=f"gnew_{g_idx}")
+                override = c.selectbox("move to:", ["(use group)"] + existing + [NEW], key=f"ov_{counter}")
+                if override == "(use group)":
+                    chosen = group_name                                    # follow the group
+                elif override == NEW:
+                    chosen = c.text_input("new project:", key=f"ovnew_{counter}")   # per-file new name
+                else:
+                    chosen = override                                      # an existing folder
 
-            if name and name != NEW:
-                for f in group:
-                    assignments[f] = name
+                if chosen and chosen != NEW:
+                    assignments[f] = chosen
+                counter += 1
 
     st.write(f"### {len(assignments)} of {len(files)} files assigned")
     if st.button("Organize files"):
