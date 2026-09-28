@@ -2,9 +2,6 @@ from pathlib import Path
 from classify import classify
 from datetime import datetime
 import sys
-
-
-
 import shutil     # add at the TOP of the file with your other imports
 
 def run_copy(plan):
